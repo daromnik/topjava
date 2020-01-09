@@ -3,6 +3,7 @@ package ru.javawebinar.topjava.repository.inmemory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
+import ru.javawebinar.topjava.UserTestData;
 import ru.javawebinar.topjava.model.User;
 import ru.javawebinar.topjava.repository.UserRepository;
 
@@ -11,12 +12,19 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import static ru.javawebinar.topjava.UserTestData.ADMIN;
+import static ru.javawebinar.topjava.UserTestData.USER;
+
+
 @Repository
 public class InMemoryUserRepository implements UserRepository {
     private static final Logger log = LoggerFactory.getLogger(InMemoryUserRepository.class);
 
-    public static final int USER_ID = 1;
-    public static final int ADMIN_ID = 2;
+    public void init() {
+        usersMap.clear();
+        usersMap.put(UserTestData.USER_ID, USER);
+        usersMap.put(UserTestData.ADMIN_ID, ADMIN);
+    }
 
     private Map<Integer, User> usersMap = new ConcurrentHashMap<>();
     private AtomicInteger counter = new AtomicInteger(0);

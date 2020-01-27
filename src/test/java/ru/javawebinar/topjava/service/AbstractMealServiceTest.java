@@ -7,38 +7,24 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.Stopwatch;
 import org.junit.runner.Description;
-import org.junit.runner.RunWith;
-import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.jdbc.Sql;
-import org.springframework.test.context.jdbc.SqlConfig;
-import org.springframework.test.context.junit4.SpringRunner;
-import ru.javawebinar.topjava.ActiveDbProfileResolver;
 import ru.javawebinar.topjava.model.Meal;
 import ru.javawebinar.topjava.util.exception.NotFoundException;
 
+import javax.validation.ConstraintViolationException;
 import java.time.LocalDate;
 import java.time.Month;
 import java.util.concurrent.TimeUnit;
 
-import static org.slf4j.LoggerFactory.getLogger;
+import static java.time.LocalDateTime.of;
 import static ru.javawebinar.topjava.MealTestData.*;
 import static ru.javawebinar.topjava.UserTestData.ADMIN_ID;
 import static ru.javawebinar.topjava.UserTestData.USER_ID;
 
-@ContextConfiguration({
-        "classpath:spring/spring-app.xml",
-        "classpath:spring/spring-db.xml"
-})
-@RunWith(SpringRunner.class)
-@Sql(scripts = "classpath:db/populateDB.sql", config = @SqlConfig(encoding = "UTF-8"))
-@ActiveProfiles(resolver = ActiveDbProfileResolver.class)
-public class MealServiceTest {
-    private static final Logger log = getLogger("result");
+public abstract class AbstractMealServiceTest extends AbstractServiceTest {
 
-    private static StringBuilder results = new StringBuilder();
+    @Autowired
+    protected MealService service;
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();
@@ -86,9 +72,6 @@ public class MealServiceTest {
                 "\n---------------------------------");
     }
 
-    @Autowired
-    private MealService service;
-
     @Test
     public void delete() throws Exception {
         service.delete(MEAL1_ID, USER_ID);
@@ -110,7 +93,7 @@ public class MealServiceTest {
 
     @Test
     public void create() throws Exception {
-        Meal newMeal = getCreated();
+        Meal newMeal = getNew();
         Meal created = service.create(newMeal, USER_ID);
         Integer newId = created.getId();
         newMeal.setId(newId);
@@ -127,7 +110,7 @@ public class MealServiceTest {
     @Test
     public void getNotFound() throws Exception {
         thrown.expect(NotFoundException.class);
-        service.get(MEAL1_ID, ADMIN_ID);
+        service.get(1, ADMIN_ID);
     }
 
     @Test
@@ -165,5 +148,13 @@ public class MealServiceTest {
     @Test
     public void getBetweenWithNullDates() throws Exception {
         assertMatch(service.getBetweenDates(null, null, USER_ID), MEALS);
+    }
+
+    @Test
+    public void createWithException() throws Exception {
+        validateRootCause(() -> service.create(new Meal(null, of(2015, Month.JUNE, 1, 18, 0), "  ", 300), USER_ID), ConstraintViolationException.class);
+        validateRootCause(() -> service.create(new Meal(null, null, "Description", 300), USER_ID), ConstraintViolationException.class);
+        validateRootCause(() -> service.create(new Meal(null, of(2015, Month.JUNE, 1, 18, 0), "Description", 9), USER_ID), ConstraintViolationException.class);
+        validateRootCause(() -> service.create(new Meal(null, of(2015, Month.JUNE, 1, 18, 0), "Description", 5001), USER_ID), ConstraintViolationException.class);
     }
 }
